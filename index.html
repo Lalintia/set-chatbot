@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SET News — AI Chatbot</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #020f07 0%, #051a0d 50%, #071f10 100%);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Chat Toggle Button */
+    .chat-toggle-button {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #00923f 0%, #005c27 100%);
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+      box-shadow: 0 8px 32px rgba(0, 146, 63, 0.45), 0 0 40px rgba(0, 146, 63, 0.2);
+      transition: all 0.3s ease;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chat-toggle-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 40px rgba(0, 146, 63, 0.55), 0 0 60px rgba(0, 146, 63, 0.3);
+    }
+
+    .chat-toggle-button.active {
+      background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+      box-shadow: 0 8px 32px rgba(255, 71, 87, 0.4);
+    }
+
+    /* Chat Window */
+    .chat-window {
+      position: fixed;
+      bottom: 100px;
+      right: 24px;
+      width: 380px;
+      height: 550px;
+      background: rgba(5, 20, 10, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 1px solid rgba(0, 146, 63, 0.25);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 146, 63, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 9998;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chat-window.is-open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      visibility: visible;
+    }
+
+    /* Chat Header */
+    .chat-header {
+      background: linear-gradient(135deg, rgba(0, 146, 63, 0.2) 0%, rgba(0, 92, 39, 0.15) 100%);
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(0, 146, 63, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-header-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00923f 0%, #005c27 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .chat-header-info h3 {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .chat-header-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6a9a7a;
+      font-size: 12px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      background: #00923f;
+      border-radius: 50%;
+      animation: pulse-animation 2s infinite;
+    }
+
+    @keyframes pulse-animation {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Chat Messages */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: rgba(0, 146, 63, 0.05);
+      border-radius: 3px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: rgba(0, 146, 63, 0.3);
+      border-radius: 3px;
+    }
+
+    /* Message Bubbles */
+    .message {
+      max-width: 80%;
+      padding: 14px 18px;
+      border-radius: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+      animation: message-slide-in 0.3s ease;
+    }
+
+    @keyframes message-slide-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message--bot {
+      align-self: flex-start;
+      background: rgba(10, 30, 15, 0.8);
+      border: 1px solid rgba(0, 146, 63, 0.2);
+      color: #fff;
+      border-radius: 20px 20px 20px 6px;
+    }
+
+    .message--user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #00923f 0%, #005c27 100%);
+      color: #fff;
+      border-radius: 20px 20px 6px 20px;
+    }
+
+    /* Typing Indicator */
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      background: rgba(10, 30, 15, 0.8);
+      border: 1px solid rgba(0, 146, 63, 0.2);
+      padding: 18px 22px;
+      border-radius: 20px 20px 20px 6px;
+    }
+
+    .typing-indicator.is-active {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .typing-indicator-dot {
+      width: 8px;
+      height: 8px;
+      background: #00923f;
+      border-radius: 50%;
+      animation: typing-bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator-dot:nth-child(1) { animation-delay: 0s; }
+    .typing-indicator-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing-bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-10px); }
+    }
+
+    /* Chat Input */
+    .chat-input-container {
+      padding: 16px 20px;
+      background: rgba(5, 20, 10, 0.8);
+      border-top: 1px solid rgba(0, 146, 63, 0.12);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .chat-input-field {
+      flex: 1;
+      background: rgba(10, 30, 15, 0.6);
+      border: 1px solid rgba(0, 146, 63, 0.25);
+      border-radius: 24px;
+      padding: 12px 18px;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .chat-input-field:focus {
+      border-color: #00923f;
+      box-shadow: 0 0 0 3px rgba(0, 146, 63, 0.12);
+    }
+
+    .chat-input-field::placeholder {
+      color: #6a9a7a;
+    }
+
+    .chat-send-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #00923f 0%, #005c27 100%);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .chat-send-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(0, 146, 63, 0.4);
+    }
+
+    .chat-send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .chat-send-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .chat-window {
+        width: calc(100vw - 40px);
+        height: 70vh;
+        right: 20px;
+        bottom: 90px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="chat-window" id="chatWindow">
+    <div class="chat-header">
+      <div class="chat-header-avatar">📈</div>
+      <div class="chat-header-info">
+        <h3>SET News AI</h3>
+        <div class="chat-header-status">
+          <span class="status-indicator"></span>
+          <span>Online</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="typing-indicator-dot"></div>
+      <div class="typing-indicator-dot"></div>
+      <div class="typing-indicator-dot"></div>
+    </div>
+
+    <div class="chat-input-container">
+      <input type="text" class="chat-input-field" id="chatInput" placeholder="ถามข่าวหุ้นหรือประกาศตลาด..." autocomplete="off">
+      <button class="chat-send-button" id="chatSendButton">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <button class="chat-toggle-button" id="chatToggleButton">💬</button>
+
+  <script>
+    const CONFIG = {
+      WEBHOOK_URL: 'https://kairos.shareinvestor.app/webhook/b1c2d3e4-0011-0011-0011-000000000011/chat',
+      STORAGE_KEY: 'setNewsChatSessionId',
+      INITIAL_MESSAGES: [
+        'สวัสดีครับ ยินดีต้อนรับสู่ SET News AI',
+        'ถามข่าวหุ้นหรือประกาศตลาดหลักทรัพย์ได้เลยครับ'
+      ]
+    };
+
+    const DOM = {
+      toggleButton: document.getElementById('chatToggleButton'),
+      chatWindow: document.getElementById('chatWindow'),
+      messagesContainer: document.getElementById('chatMessages'),
+      inputField: document.getElementById('chatInput'),
+      sendButton: document.getElementById('chatSendButton'),
+      typingIndicator: document.getElementById('typingIndicator')
+    };
+
+    const state = {
+      isChatOpen: false,
+      isAwaitingResponse: false,
+      sessionId: getOrCreateSessionId()
+    };
+
+    function getOrCreateSessionId() {
+      let sessionId = localStorage.getItem(CONFIG.STORAGE_KEY);
+      if (!sessionId) {
+        sessionId = generateUUIDv4();
+        localStorage.setItem(CONFIG.STORAGE_KEY, sessionId);
+      }
+      return sessionId;
+    }
+
+    function generateUUIDv4() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    function toggleChat() {
+      state.isChatOpen = !state.isChatOpen;
+
+      DOM.chatWindow.classList.toggle('is-open', state.isChatOpen);
+      DOM.toggleButton.classList.toggle('active', state.isChatOpen);
+      DOM.toggleButton.textContent = state.isChatOpen ? '✕' : '💬';
+
+      if (state.isChatOpen && DOM.messagesContainer.children.length === 0) {
+        showWelcomeMessages();
+      }
+    }
+
+    function showWelcomeMessages() {
+      CONFIG.INITIAL_MESSAGES.forEach((message, index) => {
+        setTimeout(() => {
+          appendMessage('bot', message);
+        }, 300 + (index * 500));
+      });
+    }
+
+    function appendMessage(sender, text) {
+      const messageElement = document.createElement('div');
+      messageElement.className = `message message--${sender}`;
+      messageElement.textContent = text;
+
+      DOM.messagesContainer.appendChild(messageElement);
+      scrollToBottom();
+    }
+
+    function toggleTypingIndicator(isVisible) {
+      state.isAwaitingResponse = isVisible;
+      DOM.typingIndicator.classList.toggle('is-active', isVisible);
+
+      if (isVisible) {
+        DOM.messagesContainer.appendChild(DOM.typingIndicator);
+        scrollToBottom();
+      }
+    }
+
+    function scrollToBottom() {
+      DOM.messagesContainer.scrollTop = DOM.messagesContainer.scrollHeight;
+    }
+
+    async function handleSendMessage() {
+      const userMessage = DOM.inputField.value.trim();
+
+      if (!userMessage || state.isAwaitingResponse) {
+        return;
+      }
+
+      appendMessage('user', userMessage);
+      DOM.inputField.value = '';
+      DOM.sendButton.disabled = true;
+      toggleTypingIndicator(true);
+
+      try {
+        const botResponse = await sendMessageToWebhook(userMessage);
+        toggleTypingIndicator(false);
+        appendMessage('bot', botResponse);
+      } catch (error) {
+        console.error('Chat error:', error);
+        toggleTypingIndicator(false);
+        appendMessage('bot', 'ขออภัย เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+      } finally {
+        DOM.sendButton.disabled = false;
+      }
+    }
+
+    async function sendMessageToWebhook(message) {
+      const response = await fetch(CONFIG.WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'sendMessage',
+          chatInput: message,
+          sessionId: state.sessionId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return extractResponseText(data);
+    }
+
+    function extractResponseText(data) {
+      if (data?.text) { return data.text; }
+      if (data?.message) { return data.message; }
+      if (data?.output) { return data.output; }
+      if (Array.isArray(data) && data[0]?.output) { return data[0].output; }
+      if (Array.isArray(data) && data[0]?.text) { return data[0].text; }
+      return 'ขออภัย ไม่สามารถประมวลผลคำถามของคุณได้ในขณะนี้';
+    }
+
+    DOM.toggleButton.addEventListener('click', toggleChat);
+    DOM.sendButton.addEventListener('click', handleSendMessage);
+
+    DOM.inputField.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        handleSendMessage();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && state.isChatOpen) {
+        toggleChat();
+      }
+    });
+  </script>
+</body>
+</html>
